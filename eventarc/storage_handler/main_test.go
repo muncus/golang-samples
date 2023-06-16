@@ -19,12 +19,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
-	"github.com/cloudevents/sdk-go/v2/event/datacodec"
 	"github.com/googleapis/google-cloudevents-go/cloud/storagedata"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -33,20 +32,14 @@ func TestHelloStorage(t *testing.T) {
 	so := storagedata.StorageObjectData{
 		Bucket:  "my-example-bucket",
 		Name:    "my-object-name",
-		Updated: timestamppb.Now(),
+		Updated: timestamppb.New(time.Now()),
 	}
-	// experimental: datacodec for simpler tests.
-	datacodec.AddEncoder(*cloudevents.StringOfApplicationJSON(),
-		func(ctx context.Context, in interface{}) ([]byte, error) {
-			return protojson.Marshal(in.(proto.Message))
-		})
-	// the alternative:
-	// jsondata, _ := protojson.Marshal(&so)
+	jsondata, _ := protojson.Marshal(&so)
 	ce := cloudevents.NewEvent()
 	ce.SetID("sample-id")
 	ce.SetSource("//sample/source")
 	ce.SetType("google.cloud.storage.object.v1.finalized")
-	ce.SetData(*cloudevents.StringOfApplicationJSON(), &so)
+	ce.SetData(*cloudevents.StringOfApplicationJSON(), jsondata)
 
 	w := httptest.NewRecorder()
 	r, err := cloudevents.NewHTTPRequestFromEvent(context.Background(), "http://localhost", ce)
